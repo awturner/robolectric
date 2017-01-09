@@ -170,7 +170,6 @@ class RoboJavaModulePlugin implements Plugin<Project> {
 
             checkApiChanges {
                 baseArtifact "${project.group}:${mavenArtifactName}:${apiCompatVersion}"
-
             }
         }
     }

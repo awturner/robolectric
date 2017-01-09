@@ -7,7 +7,6 @@ import org.objectweb.asm.tree.MethodNode
 
 import java.util.jar.JarEntry
 import java.util.jar.JarInputStream
-import java.util.regex.Pattern
 
 import static java.util.Arrays.asList
 import static org.objectweb.asm.Opcodes.ACC_PRIVATE
@@ -30,39 +29,71 @@ class CheckApiChangesPlugin implements Plugin<Project> {
 
         project.task('checkForApiChanges', dependsOn: 'jar') {
             doLast {
+                Map<ClassMethod, Change> changedClassMethods = new TreeMap<>()
 
                 def baseUrls = project.configurations.checkApiChanges*.toURI()*.toURL()
                 Map<String, ClassMethod> prevClassMethods = findClassMethods(baseUrls)
                 Map<String, ClassMethod> curClassMethods = findClassMethods(asList(new URL("file://${project.jar.archivePath}")))
+
                 Set<String> allMethods = new TreeSet<>(prevClassMethods.keySet())
                 allMethods.addAll(curClassMethods.keySet())
-                String prevClassName = null
+
                 for (String classMethodName : allMethods) {
                     ClassMethod prevClassMethod = prevClassMethods.get(classMethodName)
                     ClassMethod curClassMethod = curClassMethods.get(classMethodName)
 
-                    def introClass = { classMethod ->
-                        if (classMethod.className != prevClassName) {
-                            prevClassName = classMethod.className
-                            println "\n$prevClassName:"
-                        }
-                    }
-
                     if (prevClassMethod == null) {
                         // added
                         if (curClassMethod.visible) {
-                            introClass(curClassMethod)
-                            println "+ $curClassMethod.methodDesc"
+                            changedClassMethods.put(curClassMethod, Change.ADDED)
                         }
                     } else if (curClassMethod == null) {
                         // removed
                         if (prevClassMethod.visible && !prevClassMethod.deprecated) {
-                            introClass(prevClassMethod)
-                            println "- $prevClassMethod.methodDesc (not previously @Deprecated)"                        }
-
+                            changedClassMethods.put(prevClassMethod, Change.REMOVED)
+                        }
                     } else {
 //                        println "changed: $classMethodName"
                     }
+                }
+
+                String prevClassName = null
+                def introClass = { classMethod ->
+                    if (classMethod.className != prevClassName) {
+                        prevClassName = classMethod.className
+                        println "\n$prevClassName:"
+                    }
+                }
+
+                def entryPoints = project.checkApiChanges.entryPoints
+                Closure matchesEntryPoint = { ClassMethod classMethod ->
+                    for (String entryPoint : entryPoints) {
+                        if (classMethod.className.matches(entryPoint)) {
+                            return true
+                        }
+                    }
+                    return false
+                }
+
+                for (Map.Entry<ClassMethod, Change> change : changedClassMethods.entrySet()) {
+                    def classMethod = change.key
+                    def changeType = change.value
+
+                    def showAllChanges = true // todo: only show stuff that's interesting...
+                    if (matchesEntryPoint(classMethod) || showAllChanges) {
+                        introClass(classMethod)
+
+                        switch (changeType) {
+                            case Change.ADDED:
+                                println "+ ${classMethod.methodDesc}"
+                                break
+                            case Change.REMOVED:
+                                println "- ${classMethod.methodDesc} (not previously @Deprecated)"
+                                break
+                        }
+                    }
+
+
                 }
             }
         }
@@ -95,7 +126,11 @@ class CheckApiChangesPlugin implements Plugin<Project> {
         classMethods
     }
 
-    static class ClassMethod {
+    static enum Change {
+        ADDED, REMOVED
+    }
+
+    static class ClassMethod implements Comparable<ClassMethod> {
         ClassNode classNode
         MethodNode methodNode
 
@@ -178,7 +213,11 @@ class CheckApiChangesPlugin implements Plugin<Project> {
 
         @Override
         public String toString() {
-            return className + "#$methodNode.desc";
+            return internalName();
+        }
+
+        private String internalName() {
+            classNode.name + "#$methodNode.name$methodNode.desc"
         }
 
         private String getSignature() {
@@ -201,9 +240,16 @@ class CheckApiChangesPlugin implements Plugin<Project> {
         boolean isVisible() {
             classNode.access != ACC_PRIVATE && !(classNode.name =~ /\$[0-9]/) && !(methodNode.name =~ /^access\$/)
         }
+
+        @Override
+        int compareTo(ClassMethod o) {
+            internalName() <=> o.internalName()
+        }
     }
 }
 
 class CheckApiChangesExtension {
     String baseArtifact
+
+    List<String> entryPoints = new ArrayList<>()
 }
