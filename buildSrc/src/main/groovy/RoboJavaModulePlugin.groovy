@@ -164,6 +164,14 @@ class RoboJavaModulePlugin implements Plugin<Project> {
                     }
                 }
             }
+
+
+            project.apply plugin: CheckApiChangesPlugin
+
+            checkApiChanges {
+                baseArtifact "${project.group}:${mavenArtifactName}:${apiCompatVersion}"
+
+            }
         }
     }
 
