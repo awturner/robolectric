@@ -1,7 +1,6 @@
 package org.robolectric;
 
 import android.app.Application;
-
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.junit.runner.Result;
@@ -9,52 +8,30 @@ import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.model.InitializationError;
 import org.robolectric.annotation.Config;
-import org.robolectric.annotation.Implementation;
-import org.robolectric.annotation.Implements;
-import org.robolectric.annotation.RealObject;
 import org.robolectric.annotation.internal.DoNotInstrument;
-import org.robolectric.annotation.internal.Instrument;
-import org.robolectric.internal.ParallelUniverseInterface;
 import org.robolectric.internal.SdkConfig;
-import org.robolectric.internal.ShadowProvider;
-import org.robolectric.internal.ShadowedObject;
-import org.robolectric.internal.bytecode.AndroidInterceptors;
-import org.robolectric.internal.bytecode.ClassHandler;
-import org.robolectric.internal.bytecode.DirectObjectMarker;
-import org.robolectric.internal.bytecode.InstrumentationConfiguration;
 import org.robolectric.internal.SdkEnvironment;
-import org.robolectric.internal.bytecode.InstrumentingClassLoader;
-import org.robolectric.internal.bytecode.MethodRef;
-import org.robolectric.internal.bytecode.ShadowInvalidator;
-import org.robolectric.internal.bytecode.ShadowWrangler;
-import org.robolectric.internal.dependency.DependencyJar;
-import org.robolectric.internal.fakes.RoboCharsets;
-import org.robolectric.internal.fakes.RoboExtendedResponseCache;
-import org.robolectric.internal.fakes.RoboResponseSource;
+import org.robolectric.internal.bytecode.InstrumentationConfiguration;
 import org.robolectric.manifest.AndroidManifest;
-import org.robolectric.res.FsFile;
-import org.robolectric.res.ResourcePath;
-import org.robolectric.res.ResourceTable;
-import org.robolectric.res.builder.XmlBlock;
-import org.robolectric.util.TempDirectory;
-import org.robolectric.util.Transcript;
 
 import java.lang.reflect.Method;
-import java.util.ServiceLoader;
+import java.util.ArrayList;
+import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.junit.Assert.assertTrue;
 import static org.robolectric.util.TestUtil.resourceFile;
 
 public class TestRunnerSequenceTest {
   public static class StateHolder {
-    public static Transcript transcript;
+    public static List<String> transcript;
   }
 
   @Test public void shouldRunThingsInTheRightOrder() throws Exception {
-    StateHolder.transcript = new Transcript();
+    StateHolder.transcript = new ArrayList<>();
     assertNoFailures(run(new Runner(SimpleTest.class)));
-    StateHolder.transcript.assertEventsSoFar(
+    assertThat(StateHolder.transcript).containsExactly(
         "configureShadows",
 //                "resetStaticState", // no longer an overridable hook
 //                "setupApplicationState", // no longer an overridable hook
@@ -69,10 +46,11 @@ public class TestRunnerSequenceTest {
         "afterTest",
         "application.afterTest"
     );
+    StateHolder.transcript.clear();
   }
 
   @Test public void whenNoAppManifest_shouldRunThingsInTheRightOrder() throws Exception {
-    StateHolder.transcript = new Transcript();
+    StateHolder.transcript = new ArrayList<>();
     assertNoFailures(run(new Runner(SimpleTest.class) {
       @Override protected AndroidManifest getAppManifest(Config config) {
         return new AndroidManifest(null, null, null, "package") {
@@ -83,7 +61,7 @@ public class TestRunnerSequenceTest {
         };
       }
     }));
-    StateHolder.transcript.assertEventsSoFar(
+    assertThat(StateHolder.transcript).containsExactly(
         "configureShadows",
         "createApplication",
         "application.onCreate",
@@ -96,6 +74,7 @@ public class TestRunnerSequenceTest {
         "afterTest",
         "application.afterTest"
     );
+    StateHolder.transcript.clear();
   }
 
   @Test public void shouldReleaseAllStateAfterClassSoWeDontLeakMemory() throws Exception {
