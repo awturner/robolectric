@@ -9,14 +9,38 @@ import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.model.InitializationError;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.Implementation;
+import org.robolectric.annotation.Implements;
+import org.robolectric.annotation.RealObject;
+import org.robolectric.annotation.internal.DoNotInstrument;
+import org.robolectric.annotation.internal.Instrument;
+import org.robolectric.internal.ParallelUniverseInterface;
 import org.robolectric.internal.SdkConfig;
+import org.robolectric.internal.ShadowProvider;
+import org.robolectric.internal.ShadowedObject;
+import org.robolectric.internal.bytecode.AndroidInterceptors;
+import org.robolectric.internal.bytecode.ClassHandler;
+import org.robolectric.internal.bytecode.DirectObjectMarker;
 import org.robolectric.internal.bytecode.InstrumentationConfiguration;
 import org.robolectric.internal.SdkEnvironment;
+import org.robolectric.internal.bytecode.InstrumentingClassLoader;
+import org.robolectric.internal.bytecode.MethodRef;
+import org.robolectric.internal.bytecode.ShadowInvalidator;
+import org.robolectric.internal.bytecode.ShadowWrangler;
+import org.robolectric.internal.dependency.DependencyJar;
+import org.robolectric.internal.fakes.RoboCharsets;
+import org.robolectric.internal.fakes.RoboExtendedResponseCache;
+import org.robolectric.internal.fakes.RoboResponseSource;
 import org.robolectric.manifest.AndroidManifest;
 import org.robolectric.res.FsFile;
+import org.robolectric.res.ResourcePath;
+import org.robolectric.res.ResourceTable;
+import org.robolectric.res.builder.XmlBlock;
+import org.robolectric.util.TempDirectory;
 import org.robolectric.util.Transcript;
 
 import java.lang.reflect.Method;
+import java.util.ServiceLoader;
 
 import static org.assertj.core.api.Assertions.fail;
 import static org.junit.Assert.assertTrue;
@@ -109,9 +133,10 @@ public class TestRunnerSequenceTest {
 
     @NotNull
     @Override public InstrumentationConfiguration createClassLoaderConfig(Config config) {
-      return InstrumentationConfiguration.newBuilder()
-          .doNotAcquireClass(StateHolder.class.getName())
-          .build();
+      InstrumentationConfiguration.Builder builder = InstrumentationConfiguration.newBuilder();
+      RobolectricTestRunner.configure(builder);
+      builder.doNotAcquireClass(StateHolder.class);
+      return builder.build();
     }
 
     @Override
@@ -130,6 +155,7 @@ public class TestRunnerSequenceTest {
     }
   }
 
+  @DoNotInstrument
   public static class MyTestLifecycle extends DefaultTestLifecycle {
     @Override public Application createApplication(Method method, AndroidManifest appManifest, Config config) {
       StateHolder.transcript.add("createApplication");
