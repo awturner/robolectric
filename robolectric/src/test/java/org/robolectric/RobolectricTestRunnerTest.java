@@ -10,7 +10,7 @@ import org.junit.runner.notification.RunListener;
 import org.junit.runner.notification.RunNotifier;
 import org.robolectric.RobolectricTestRunner.RobolectricFrameworkMethod;
 import org.robolectric.annotation.Config;
-import org.robolectric.internal.ParallelUniverse;
+import org.robolectric.android.ParallelUniverse;
 import org.robolectric.internal.ParallelUniverseInterface;
 import org.robolectric.internal.SdkConfig;
 import org.robolectric.internal.SdkEnvironment;
@@ -25,7 +25,6 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.robolectric.util.ReflectionHelpers.ClassParameter.from;
 import static org.robolectric.util.ReflectionHelpers.callConstructor;
-import static org.robolectric.util.ReflectionHelpers.newInstance;
 
 public class RobolectricTestRunnerTest {
 
@@ -69,8 +68,8 @@ public class RobolectricTestRunnerTest {
     };
     runner.run(notifier);
     assertThat(events).containsExactly(
-        "failure: java.lang.RuntimeException: fake error in resetStaticState",
-        "failure: java.lang.RuntimeException: fake error in resetStaticState"
+        "failure: fake error in resetStaticState",
+        "failure: fake error in resetStaticState"
     );
   }
 
