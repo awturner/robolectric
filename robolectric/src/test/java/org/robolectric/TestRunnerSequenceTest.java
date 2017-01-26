@@ -10,7 +10,6 @@ import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
 import org.robolectric.annotation.Config;
 import org.robolectric.annotation.internal.DoNotInstrument;
-import org.robolectric.internal.AndroidConfigurer;
 import org.robolectric.internal.SdkConfig;
 import org.robolectric.internal.bytecode.InstrumentationConfiguration;
 import org.robolectric.internal.bytecode.Sandbox;
@@ -19,7 +18,10 @@ import org.robolectric.manifest.AndroidManifest;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
+import static android.os.Build.VERSION_CODES.JELLY_BEAN;
+import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.junit.Assert.assertTrue;
@@ -110,6 +112,12 @@ public class TestRunnerSequenceTest {
   public static class Runner extends RobolectricTestRunner {
     public Runner(Class<?> testClass) throws InitializationError {
       super(testClass);
+    }
+
+    @NotNull
+    @Override
+    protected SdkPicker createSdkPicker() {
+      return new SdkPicker(asList(new SdkConfig(JELLY_BEAN)), new Properties());
     }
 
     @NotNull
