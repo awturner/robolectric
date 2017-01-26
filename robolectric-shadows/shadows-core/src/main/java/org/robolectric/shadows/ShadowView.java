@@ -32,8 +32,8 @@ import java.io.PrintStream;
 import java.lang.reflect.Method;
 
 import static org.robolectric.Shadows.shadowOf;
-import static org.robolectric.internal.Shadow.directlyOn;
-import static org.robolectric.internal.Shadow.invokeConstructor;
+import static org.robolectric.shadow.api.Shadow.directlyOn;
+import static org.robolectric.shadow.api.Shadow.invokeConstructor;
 
 /**
  * Shadow for {@link android.view.View}.
